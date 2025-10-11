@@ -1,39 +1,101 @@
-version: '3.8'
-
 services:
-  # MySQL Service
+  # MySQL Database Service
   mysql:
     image: mysql:8.0
-    container_name: mysql
+    container_name: swiftcart-mysql
+    restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: Rak@1411
-      MYSQL_DATABASE: athena
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-swiftcart_db}
     ports:
-      - "3306:3306"
+      - "${DB_PORT:-3307}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+    networks:
+      - swiftcart-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-root}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
-  # Spring Boot Application
-  backend:
-    build: .
-    container_name: backend
+  # Redis Cache Service
+  redis:
+    image: redis:7-alpine
+    container_name: swiftcart-redis
+    restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - swiftcart-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    command: redis-server --appendonly yes
+
+  # Spring Boot Backend Application
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: swift-cart-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:8080"
     depends_on:
       mysql:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/athena
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: Rak@1411
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SPRING_JPA_SHOW_SQL: "true"
-      HUGGINGFACE_API_KEY: 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
+      # Database Configuration
+      DB_URL: jdbc:mysql://mysql:3306/${DB_NAME:-swiftcart_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USERNAME: ${DB_USERNAME:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      
+      # Redis Configuration
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      
+      # JWT Configuration
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-this-in-production-min-256-bits}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      
+      # Mail Configuration
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-your-email@gmail.com}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-your-app-password}
+      
+      # Razorpay Configuration
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-your-razorpay-key-id}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-your-razorpay-key-secret}
+      
+      # Hugging Face API
+      HUGGINGFACE_API_KEY: ${HUGGINGFACE_API_KEY:-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}
+      
+      # Spring Boot Configuration
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      
+      # JVM Options
+      JAVA_OPTS: "-Xms512m -Xmx1024m"
+    networks:
+      - swiftcart-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  swiftcart-network:
 
 volumes:
-  mysql_data: 
+  mysql_data:
+  redis_data: 
