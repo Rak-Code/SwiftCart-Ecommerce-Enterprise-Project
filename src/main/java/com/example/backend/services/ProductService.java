@@ -3,6 +3,7 @@ package com.example.backend.services;
 import com.example.backend.model.Product;
 import com.example.backend.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,18 +16,34 @@ import java.util.Optional;
 @Service
 @CacheConfig(cacheNames = "products")
 public class ProductService {
+	
+	@Autowired
+    private CacheManager cacheManager;
+
 
     @Autowired
     private ProductRepository productRepository;
 
     @Autowired
     private WishlistService wishlistService;
+    
+    public void evictAllProductsCache() {
+        if (cacheManager.getCache("products") != null) {
+            cacheManager.getCache("products").evict("all");
+        }
+        // Also clear category-specific caches to avoid returning stale product objects
+        if (cacheManager.getCache("categoryProducts") != null) {
+            cacheManager.getCache("categoryProducts").clear();
+        }
+    }
+
 
     // ---------------- Create ----------------
     @CachePut(value = "products", key = "#result.productId")
     @Caching(evict = {
             @CacheEvict(value = "products", key = "'all'"),
-            @CacheEvict(value = "categories", key = "'allWithProducts'") // Evict category cache with products
+        @CacheEvict(value = "categories", key = "'allWithProducts'"), // Evict category cache with products
+        @CacheEvict(value = "categoryProducts", allEntries = true) // Clear category-specific product lists
     })
     public Product createProduct(@Valid Product product) {
         return productRepository.save(product);
@@ -49,7 +66,8 @@ public class ProductService {
             put = { @CachePut(value = "products", key = "#productId") },
             evict = { 
                 @CacheEvict(value = "products", key = "'all'"),
-                @CacheEvict(value = "categories", key = "'allWithProducts'") // Evict category cache with products
+                @CacheEvict(value = "categories", key = "'allWithProducts'"), // Evict category cache with products
+                @CacheEvict(value = "categoryProducts", allEntries = true) // Clear category-specific product lists
             }
     )
     public Product updateProduct(Long productId, @Valid Product productDetails) {
@@ -72,7 +90,8 @@ public class ProductService {
     @Caching(evict = {
             @CacheEvict(value = "products", key = "#productId"),
             @CacheEvict(value = "products", key = "'all'"),
-            @CacheEvict(value = "categories", key = "'allWithProducts'"), // Evict category cache with products
+        @CacheEvict(value = "categories", key = "'allWithProducts'"), // Evict category cache with products
+        @CacheEvict(value = "categoryProducts", allEntries = true), // Clear category-specific product lists
             @CacheEvict(value = "reviews", allEntries = true) // Clear reviews as product is deleted
     })
     public void deleteProduct(Long productId) {
@@ -102,4 +121,7 @@ public class ProductService {
     public List<Product> filterProducts(Long categoryId, BigDecimal minPrice, BigDecimal maxPrice, Product.Size size, Boolean inStock) {
         return productRepository.findByFilters(categoryId, minPrice, maxPrice, size, inStock);
     }
+
+
+	
 }

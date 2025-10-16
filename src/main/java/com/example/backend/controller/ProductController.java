@@ -17,6 +17,12 @@ public class ProductController {
 
     @Autowired
     private ProductService productService;
+    
+    @PostMapping("/refresh-products-cache")
+    public String refreshProductsCache() {
+        productService.evictAllProductsCache();
+        return "✅ Products cache cleared!";
+    }
 
     // Create a new product
     @PostMapping

@@ -19,6 +19,8 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 @Configuration
 @EnableCaching
@@ -68,23 +70,35 @@ public class CacheConfig implements CachingConfigurer {
         
         return mapper;
     }
+    
+    
 
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-        System.out.println("✅ Creating RedisCacheManager with custom serialization...");
-        
-        // Configure RedisCacheConfiguration with custom JSON serialization
-        RedisCacheConfiguration cacheConfig = RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(Duration.ofHours(1)) // Default TTL
+        System.out.println("✅ Creating RedisCacheManager with TTL per cache...");
+
+        // Base configuration: default TTL 1 hour
+        RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
+                .entryTtl(Duration.ofHours(1))
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(
                         new GenericJackson2JsonRedisSerializer(createRedisObjectMapper())
                 ));
 
+        // Optional: per-cache TTL configuration
+        Map<String, RedisCacheConfiguration> cacheConfigurations = new HashMap<>();
+        cacheConfigurations.put("products", defaultConfig.entryTtl(Duration.ofMinutes(30))); // products cache TTL 30 min
+        cacheConfigurations.put("categories", defaultConfig.entryTtl(Duration.ofHours(1)));
+        cacheConfigurations.put("users", defaultConfig.entryTtl(Duration.ofHours(2)));
+        cacheConfigurations.put("reviews", defaultConfig.entryTtl(Duration.ofMinutes(15)));
+        cacheConfigurations.put("addresses", defaultConfig.entryTtl(Duration.ofHours(1)));
+
         return RedisCacheManager.builder(connectionFactory)
-                .cacheDefaults(cacheConfig)
+                .cacheDefaults(defaultConfig)
+                .withInitialCacheConfigurations(cacheConfigurations)
                 .build();
     }
+
     
     @Override
     public CacheErrorHandler errorHandler() {
