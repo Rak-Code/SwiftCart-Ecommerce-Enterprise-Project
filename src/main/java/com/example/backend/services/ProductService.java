@@ -52,6 +52,7 @@ public class ProductService {
     // ---------------- Read All ----------------
     @Cacheable(value = "products", key = "'all'")
     public List<Product> getAllProducts() {
+        System.out.println("⚙️ Fetching products from database (cache MISS)");
         return productRepository.findAll();
     }
 

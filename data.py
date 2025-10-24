@@ -1,6 +1,6 @@
 import random
 
-random.seed(42)  # seed for reproducible output
+random.seed(42)  # reproducible output
 
 # Base data
 categories = [
@@ -8,20 +8,17 @@ categories = [
     'Fitness', 'Beauty', 'Outdoor', 'Office', 'Decor', 'Accessories'
 ]
 attributes = [
-    'comfortable', 'premium', 'organic', 'portable', 'wireless',
-    'ergonomic', 'luxury', 'smart', 'durable', 'modern'
-]
-items = [
-    'T-Shirt', 'Jacket', 'Jeans', 'Headphones', 'Speaker', 'Power Bank',
-    'Cookware Set', 'Coffee Beans', 'Towel Set', 'Chair', 'Cutting Board',
-    'Water Bottle', 'Keyboard', 'Yoga Mat', 'Wine Glass Set', 'Fitness Tracker',
-    'Moisturizer', 'Plant', 'Skillet', 'Pillow', 'Desk Lamp', 'Sneakers',
-    'Dinnerware', 'Thermostat', 'Tea', 'Dumbbells', 'Candle', 'Tent',
-    'French Press', 'Charging Pad', 'Blanket', 'Air Fryer', 'Storage Bags',
-    'Kettle', 'Earbuds', 'Laptop Stand', 'Mug Set', 'Backpack', 'Lip Balm', 'LED Bulb'
+    'comfortable', 'premium', 'organic', 'soft', 'warm',
+    'lightweight', 'breathable', 'insulated', 'stylish', 'durable'
 ]
 
-# Price ranges for categories
+# Focused clothing items only
+clothing_items = [
+    'T-Shirt', 'Jacket', 'Jeans', 'Sweater', 'Hoodie', 'Shorts',
+    'Dress', 'Skirt', 'Sneakers', 'Coat', 'Blazer', 'Tank Top'
+]
+
+# Price range for clothing (reuse your mapping)
 price_ranges = {
     'Clothing': (25.99, 199.99),
     'Electronics': (49.99, 499.99),
@@ -35,17 +32,16 @@ price_ranges = {
     'Accessories': (19.99, 199.99)
 }
 
-sizes = ['S', 'M', 'L', 'XL']  # Possible sizes
-quantities = range(10, 101)    # Stock quantity range
+sizes = ['S', 'M', 'L', 'XL']
+min_stock, max_stock = 10, 100  # stock quantity range
 
-# Function to generate a random product
-def generate_product(used_names):
-    category = random.choice(categories)
-    item = random.choice(items)
+def generate_clothing_product(used_names):
+    category = 'Clothing'
+    item = random.choice(clothing_items)
     attribute = random.choice(attributes)
     name = f"{attribute.capitalize()} {item}"
 
-    # Ensure unique names
+    # Ensure unique names (try a few times, then append random digits)
     attempts = 0
     while name in used_names and attempts < 10:
         attribute = random.choice(attributes)
@@ -54,29 +50,32 @@ def generate_product(used_names):
     if name in used_names:
         name = f"{name} {random.randint(100,999)}"
 
-    description = f"{attribute.capitalize()} {item.lower()} for {random.choice(['daily use', 'home use', 'outdoor activities', 'modern lifestyles', 'everyday comfort'])}"
+    description = f"{attribute.capitalize()} {item.lower()} for {random.choice(['daily use', 'everyday comfort', 'casual wear', 'outdoor activities', 'work & travel'])}"
     min_price, max_price = price_ranges[category]
     price = round(random.uniform(min_price, max_price), 2)
-    image_url = f"https://picsum.photos/seed/{random.randint(1,10000)}/400/400"
+    image_url = f"/images/{item.lower().replace(' ', '_')}_{random.randint(1,10000)}.jpg"
     size = random.choice(sizes)
-    quantity = random.choice(quantities)
-    category_id = categories.index(category) + 1  # simple category mapping
+    stock_quantity = random.randint(min_stock, max_stock)
+    category_id = categories.index(category) + 1  # clothing -> 1
 
-    return description, image_url, name, price, size, quantity, category_id
+    # Return in the order required by SQL:
+    # name, description, price, size, stock_quantity, category_id, image_url
+    return name, description, price, size, stock_quantity, category_id, image_url
 
-# Generate 1000 products
+# Generate N products (1000 like your original)
+N = 1000
 used_names = set()
 products = []
-while len(products) < 1000:
-    product = generate_product(used_names)
+while len(products) < N:
+    product = generate_clothing_product(used_names)
     products.append(product)
-    used_names.add(product[2])
+    used_names.add(product[0])
 
-# Output SQL INSERT statements
-print("INSERT INTO products (description, image_url, name, price, size, quantity, category_id) VALUES")
-for i, (desc, img, name, price, size, qty, cat_id) in enumerate(products):
-    esc_desc = desc.replace("'", "''")
+# Print SQL
+print("INSERT INTO products (name, description, price, size, stock_quantity, category_id, image_url) VALUES")
+for i, (name, desc, price, size, stock_qty, cat_id, img) in enumerate(products):
     esc_name = name.replace("'", "''")
+    esc_desc = desc.replace("'", "''")
     esc_img = img.replace("'", "''")
     end = "," if i < len(products) - 1 else ";"
-    print(f"('{esc_desc}', '{esc_img}', '{esc_name}', {price}, '{size}', {qty}, {cat_id}){end}")
+    print(f"('{esc_name}', '{esc_desc}', {price:.2f}, '{size}', {stock_qty}, {cat_id}, '{esc_img}'){end}")
