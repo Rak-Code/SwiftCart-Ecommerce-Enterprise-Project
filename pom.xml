@@ -127,6 +127,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+
         <!-- Redis Cache Dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
