@@ -1,6 +1,7 @@
 package com.example.backend.repository;
 
 import com.example.backend.model.Address;
+import com.example.backend.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,4 +13,6 @@ public interface AddressRepository extends JpaRepository<Address, Long> {
     List<Address> findByUserUserId(Long userId);
     List<Address> findByUserUserIdAndAddressType(Long userId, String addressType);
     Address findByUserUserIdAndIsDefaultTrue(Long userId);
+
+    List<Address> findByUser(User user);
 }
