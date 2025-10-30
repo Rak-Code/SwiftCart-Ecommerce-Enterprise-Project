@@ -18,8 +18,12 @@ public class CorsConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
 
-        // Allow requests from your React frontend
-        config.setAllowedOrigins(List.of("http://localhost:5173")); // Update this if your frontend runs on a different port
+        // Allow requests from your React frontend and lovable project domains
+        config.setAllowedOrigins(List.of(
+            "http://localhost:5173",
+            "https://bea3589f-8348-493e-8e1f-7b5ce1f82806.lovableproject.com",
+            "https://id-preview--bea3589f-8348-493e-8e1f-7b5ce1f82806.lovable.app"
+        ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

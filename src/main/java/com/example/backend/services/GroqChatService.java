@@ -35,7 +35,7 @@ public class GroqChatService {
         payload.put("messages", messages);
         // optional tuning
         payload.put("temperature", 0.7);
-        payload.put("max_tokens", 300);
+        payload.put("max_tokens", 3000);
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
 
